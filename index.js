@@ -1,200 +1,168 @@
 // index.js
-
 const { Telegraf, Markup } = require('telegraf');
 const fs = require('fs');
-const { createObjectCsvWriter } = require('csv-writer');
-const path = require('path');
+const { writeToPath } = require('fast-csv');
+const bot = new Telegraf('8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y');
+const adminId = '6686188145';
 
-// === CONFIG ===
-const BOT_TOKEN = '8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y';
-const ADMIN_ID = '6686188145';
-const TELEGRAM_CHANNEL_LINK = 'https://t.me/+q5siBqhkQCFiNDcx';
-const usersFile = path.join(__dirname, 'users.json');
-const csvExportPath = path.join(__dirname, 'participants.csv');
-
-const bot = new Telegraf(BOT_TOKEN);
-
-// === Load/Save User Data ===
 let users = {};
-if (fs.existsSync(usersFile)) {
-  users = JSON.parse(fs.readFileSync(usersFile));
-}
-function saveUsers() {
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+try {
+  users = JSON.parse(fs.readFileSync('users.json'));
+} catch (e) {
+  console.error('No users file found or JSON malformed');
 }
 
-function getUser(ctx) {
-  const id = ctx.from.id;
+const saveUsers = () => {
+  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
+};
+
+const steps = [
+  'joinTelegram',
+  'facebookProof',
+  'instagramProof',
+  'twitterProof',
+  'walletAddress',
+];
+
+const getUser = (id) => {
   if (!users[id]) {
     users[id] = {
       id,
-      username: ctx.from.username || '',
-      ref: ctx.startPayload || '',
-      steps: {},
-      filleuls: [],
-      totalMBOA: 0,
-      completed: false,
-      joinedAt: new Date().toISOString(),
+      stepIndex: 0,
+      completedSteps: [],
+      proofs: {},
+      referredBy: null,
+      referrals: [],
+      rewards: 0,
     };
-    if (users[users[id].ref]) {
-      users[users[id].ref].filleuls.push(id);
-    }
-    saveUsers();
   }
   return users[id];
-}
+};
 
-function calculateReward(user) {
-  let total = 0;
-  if (user.steps.telegram) total += 20;
-  if (user.steps.facebook) total += 20;
-  if (user.steps.instagram) total += 30;
-  if (user.steps.twitter) total += 30;
-  if (user.steps.wallet) total += 50;
-  return total;
-}
+const nextStepPrompt = {
+  joinTelegram: `🔗 Étape 1 : Rejoins notre canal Telegram : https://t.me/+q5siBqhkQCFiNDcx\n\nMerci de cliquer sur "Fait" une fois que tu as rejoint.`,
+  facebookProof: '📸 Étape 2 : Envoie une capture de ton partage Facebook.',
+  instagramProof: '📸 Étape 3 : Envoie ton pseudo Instagram.',
+  twitterProof: '📸 Étape 4 : Envoie une capture de ton tweet.',
+  walletAddress: '💼 Étape 5 : Envoie ton adresse BEP20 (TrustWallet, Metamask, etc.)',
+};
 
-function checkCompletion(user) {
-  return user.steps.telegram && user.steps.facebook && user.steps.instagram && user.steps.twitter && user.steps.wallet;
-}
+const rewardPerStep = 50;
 
-function getReferralLink(user) {
-  return `https://t.me/mboacoinbot?start=${user.id}`;
-}
-
-function notifySponsorIfValid(userId) {
-  const user = users[userId];
-  if (checkCompletion(user)) {
-    const sponsorId = user.ref;
-    if (sponsorId && users[sponsorId]) {
-      users[sponsorId].totalMBOA += 50;
-      bot.telegram.sendMessage(sponsorId, `🎉 Ton filleul @${user.username || userId} a terminé toutes les étapes ! +50 MBOA pour toi !`);
-    }
-  }
-}
-
-// === Step Handlers ===
-async function sendWelcome(ctx) {
-  const user = getUser(ctx);
-  await ctx.reply(`👋 Bienvenue sur le Airdrop MBOACOIN !\n\nÉtape 1 : Rejoins notre canal Telegram`,
-    Markup.inlineKeyboard([
-      [Markup.button.url('📢 Rejoindre le canal', TELEGRAM_CHANNEL_LINK)]
-    ])
-  );
-  await ctx.reply('✅ Une fois terminé, clique ici pour continuer.', Markup.keyboard(['✅ J’ai rejoint Telegram']).oneTime().resize());
-}
-
-// === Commands ===
-bot.start(async ctx => {
-  const user = getUser(ctx);
-  if (user.completed) {
-    return ctx.reply(`🎉 Tu as déjà terminé toutes les étapes !\n\nVoici ton lien de parrainage : ${getReferralLink(user)}`);
-  }
-  sendWelcome(ctx);
-});
-
-bot.hears('✅ J’ai rejoint Telegram', ctx => {
-  const user = getUser(ctx);
-  user.steps.telegram = true;
-  saveUsers();
-  ctx.reply('📘 Étape 2 : Envoie ton pseudo Facebook.');
-});
-
-bot.on('text', ctx => {
-  const user = getUser(ctx);
-  const message = ctx.message.text;
-  if (!user.steps.facebook && message.startsWith('@')) {
-    user.steps.facebook = message;
-    saveUsers();
-    return ctx.reply('📸 Étape 3 : Envoie ton pseudo Instagram.');
-  }
-  if (!user.steps.instagram && message.startsWith('@')) {
-    user.steps.instagram = message;
-    saveUsers();
-    return ctx.reply('🐦 Étape 4 : Envoie ton pseudo Twitter.');
-  }
-  if (!user.steps.twitter && message.startsWith('@')) {
-    user.steps.twitter = message;
-    saveUsers();
-    return ctx.reply('💼 Étape 5 : Envoie ton adresse BEP20 (Trust Wallet, Metamask, etc).');
-  }
-  if (!user.steps.wallet && message.startsWith('0x')) {
-    user.steps.wallet = message;
-    user.totalMBOA = calculateReward(user);
-    user.completed = true;
-    saveUsers();
-    notifySponsorIfValid(user.id);
-    return ctx.reply(`🎉 Félicitations ! Tu as terminé toutes les étapes.\n\nTon lien de parrainage : ${getReferralLink(user)}\n\n👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA !`,
+const sendNextStep = async (ctx, user) => {
+  const step = steps[user.stepIndex];
+  if (!step) {
+    // All steps completed
+    user.rewards = steps.length * rewardPerStep;
+    const referralLink = `https://t.me/MboaCoinAirdropBot?start=${ctx.from.id}`;
+    await ctx.reply(`🎉 Félicitations ! Tu as terminé toutes les étapes.\n\nVoici ton lien de parrainage : ${referralLink}`);
+    await ctx.reply('👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA !',
       Markup.inlineKeyboard([
-        [Markup.button.url('🔥 Recevoir l'offre', 'https://airdrop.mboacoin.com/membrefondateur')],
-        [Markup.button.callback('❌ Décliner l'offre', 'decline_offer')]
+        [Markup.button.url('🔥 Recevoir l\'offre', 'https://t.me/+q5siBqhkQCFiNDcx')],
+        [Markup.button.callback('❌ Décliner l\'offre', 'decline_offer')],
       ])
     );
+    saveUsers();
+    return;
+  }
+  await ctx.reply(nextStepPrompt[step],
+    Markup.inlineKeyboard([
+      [Markup.button.callback('✅ Fait', 'done_step')],
+    ])
+  );
+};
+
+bot.start(async (ctx) => {
+  const user = getUser(ctx.from.id);
+  if (ctx.message.text.includes('/start ') && !user.referredBy) {
+    const ref = ctx.message.text.split(' ')[1];
+    if (ref !== ctx.from.id.toString()) user.referredBy = ref;
+  }
+  await ctx.reply('👋 Bienvenue sur le Airdrop MBOACOIN !');
+  await sendNextStep(ctx, user);
+});
+
+bot.action('done_step', async (ctx) => {
+  const user = getUser(ctx.from.id);
+  const currentStep = steps[user.stepIndex];
+  if (!user.completedSteps.includes(currentStep)) {
+    user.completedSteps.push(currentStep);
+  }
+  user.stepIndex++;
+  saveUsers();
+  await sendNextStep(ctx, user);
+
+  // Check if fully complete to notify referrer
+  if (user.stepIndex === steps.length && user.referredBy) {
+    const refUser = getUser(user.referredBy);
+    if (!refUser.referrals.includes(user.id)) {
+      refUser.referrals.push(user.id);
+      refUser.rewards += 50;
+      try {
+        await bot.telegram.sendMessage(refUser.id, `🎉 Ton filleul ${ctx.from.first_name} vient de compléter toutes les étapes ! Tu gagnes 50 MBOA supplémentaires !`);
+      } catch (e) {
+        console.error('Erreur de notification parrain :', e.message);
+      }
+    }
   }
 });
 
-bot.command('status', ctx => {
-  const user = getUser(ctx);
-  ctx.reply(`📊 Ton avancement :\nTelegram : ${user.steps.telegram ? '✅' : '❌'}\nFacebook : ${user.steps.facebook ? '✅' : '❌'}\nInstagram : ${user.steps.instagram ? '✅' : '❌'}\nTwitter : ${user.steps.twitter ? '✅' : '❌'}\nWallet : ${user.steps.wallet ? '✅' : '❌'}\nTotal : ${user.totalMBOA} MBOA`);
+bot.command('status', (ctx) => {
+  const user = getUser(ctx.from.id);
+  const currentStep = steps[user.stepIndex] || 'Complété ✅';
+  ctx.reply(`📍 Étape en cours : ${currentStep}\n✅ Étapes complétées : ${user.completedSteps.length}/${steps.length}`);
 });
 
-bot.command('top10', ctx => {
+bot.command('mesfilleuls', (ctx) => {
+  const user = getUser(ctx.from.id);
+  const valid = user.referrals.length;
+  ctx.reply(`👥 Tu as ${valid} filleuls validés.\n💰 Tu as gagné ${user.rewards} MBOA.`);
+});
+
+bot.command('top10', (ctx) => {
   const leaderboard = Object.values(users)
-    .filter(u => u.filleuls && u.filleuls.length > 0)
-    .sort((a, b) => b.filleuls.length - a.filleuls.length)
+    .sort((a, b) => b.referrals.length - a.referrals.length)
     .slice(0, 10)
-    .map((u, i) => `${i + 1}. @${u.username || u.id} - ${u.filleuls.length} filleuls`);
-  ctx.reply(`🏆 Top 10 des parrains :\n\n${leaderboard.join('\n')}`);
+    .map((u, i) => `#${i + 1} - ${u.id} : ${u.referrals.length} filleuls`)
+    .join('\n');
+  ctx.reply('🏆 Top 10 des parrains :\n' + leaderboard);
 });
 
-bot.command('mesfilleuls', ctx => {
-  const user = getUser(ctx);
-  const filleuls = user.filleuls.map(id => {
-    const f = users[id];
-    return `- @${f.username || id} : ${f.completed ? '✅' : '⏳'}`;
-  });
-  ctx.reply(`👥 Tes filleuls :\n\n${filleuls.join('\n')}`);
+bot.command('broadcast', async (ctx) => {
+  if (ctx.from.id.toString() !== adminId) return;
+  const text = ctx.message.text.replace('/broadcast', '').trim();
+  if (!text) return ctx.reply('Veuillez inclure un message après /broadcast');
+  for (const uid of Object.keys(users)) {
+    try {
+      await bot.telegram.sendMessage(uid, `📢 Annonce :\n${text}`);
+    } catch (e) {
+      console.error('Échec d\'envoi à', uid);
+    }
+  }
+  ctx.reply('✅ Message envoyé à tous les utilisateurs.');
 });
 
-bot.command('export', ctx => {
-  if (ctx.from.id.toString() !== ADMIN_ID) return;
-  const csvWriter = createObjectCsvWriter({
-    path: csvExportPath,
-    header: [
-      { id: 'id', title: 'ID' },
-      { id: 'username', title: 'Username' },
-      { id: 'totalMBOA', title: 'MBOA' },
-      { id: 'ref', title: 'Parrain' },
-      { id: 'completed', title: 'Validé' },
-      { id: 'joinedAt', title: 'Date' },
-    ]
-  });
-  csvWriter.writeRecords(Object.values(users)).then(() => {
-    ctx.replyWithDocument({ source: csvExportPath });
-  });
-});
-
-bot.command('broadcast', ctx => {
-  if (ctx.from.id.toString() !== ADMIN_ID) return;
-  ctx.reply('✍️ Envoie le message à diffuser à tous les utilisateurs :');
-  bot.once('text', m => {
-    Object.values(users).forEach(u => {
-      bot.telegram.sendMessage(u.id, `📢 Annonce :\n\n${m.message.text}`);
+bot.command('export', (ctx) => {
+  if (ctx.from.id.toString() !== adminId) return;
+  const rows = Object.values(users).map((u) => ({
+    ID: u.id,
+    ReferredBy: u.referredBy || '',
+    Referrals: u.referrals.length,
+    Rewards: u.rewards,
+    StepsDone: u.completedSteps.length,
+  }));
+  const filePath = 'export.csv';
+  writeToPath(filePath, rows, { headers: true })
+    .on('finish', () => {
+      ctx.replyWithDocument({ source: filePath });
     });
-    m.reply('✅ Message envoyé à tous.');
-  });
 });
 
-bot.command('restart', ctx => {
-  delete users[ctx.from.id];
-  saveUsers();
-  ctx.reply('🔄 Parcours réinitialisé. Envoie /start pour recommencer.');
+bot.action('decline_offer', async (ctx) => {
+  await ctx.answerCbQuery('Tu as décliné l\'offre. À bientôt !');
 });
 
-// === Start Bot ===
 bot.launch();
 
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-console.log('🤖 MboaCoin Airdrop Bot lancé.');
+process.on('SIGINT', () => bot.stop('SIGINT'));
+process.on('SIGTERM', () => bot.stop('SIGTERM'));
