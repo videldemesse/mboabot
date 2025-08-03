@@ -1,152 +1,195 @@
-// index.js
-const TelegramBot = require('node-telegram-bot-api');
+
+const { Telegraf } = require('telegraf');
 const fs = require('fs');
-const https = require('https');
-const path = require('path');
-const { parse } = require('json2csv');
+const schedule = require('node-schedule');
+const { Parser } = require('json2csv');
 
-// === CONFIGURATION ===
 const token = '8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y';
-const bot = new TelegramBot(token, { polling: true });
-const ADMIN_IDS = ['6686188145']; // Remplacer par ton ID Telegram
+const adminId = 6686188145;
+const usersFile = 'users.json';
+const logFile = 'log.txt';
 
-const DATA_FILE = './data.json';
-const proofsDir = path.join(__dirname, 'proofs');
-const sessions = {};
+const bot = new Telegraf(token);
 
-// === Initialisation ===
-if (!fs.existsSync(proofsDir)) fs.mkdirSync(proofsDir);
-if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, '[]');
-
-// === Sauvegarde des données ===
-function saveUser(data) {
-  const users = JSON.parse(fs.readFileSync(DATA_FILE));
-  users.push(data);
-  fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2));
+let users = {};
+if (fs.existsSync(usersFile)) {
+  users = JSON.parse(fs.readFileSync(usersFile));
 }
 
-// === Commande /start ===
-bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-  const username = msg.from.username || 'inconnu';
-  sessions[chatId] = {
-    telegram_id: chatId,
-    username,
-    date: new Date().toISOString(),
-    step: 'wallet'
-  };
-  bot.sendMessage(chatId, `👋 Bonjour ${msg.from.first_name} !\n\nBienvenue dans l'airdrop officiel de MboaCoin 🚀\n\nÉtape 1️⃣ : Envoie ton adresse wallet BEP-20 (BNB Chain) :`);
+function saveUsers() {
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+}
+
+// Command: /start
+bot.start(ctx => {
+  const id = ctx.from.id;
+  const ref = ctx.message.text.split(' ')[1];
+  if (!users[id]) {
+    users[id] = {
+      id,
+      username: ctx.from.username,
+      tasks: { wallet: '', proofs: false },
+      filleuls: [],
+      parrain: ref || null,
+      totalMBOA: 0
+    };
+    if (ref && users[ref] && ref !== String(id)) {
+      users[ref].filleuls.push(id);
+    }
+    saveUsers();
+  }
+  ctx.reply('👋 Bienvenue sur le Airdrop MBOA COIN ! Utilise /taches pour voir les étapes.');
 });
 
-// === Commande /status ===
-bot.onText(/\/status/, (msg) => {
-  const chatId = msg.chat.id;
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-  const user = data.find(u => u.telegram_id === chatId);
-  if (!user) return bot.sendMessage(chatId, "❌ Tu n'as pas encore complété ta participation. Tape /start pour commencer.");
-
-  const info = `👤 *Infos enregistrées :*\n🧑 Pseudo : @${user.username}\n💼 Wallet : ${user.wallet}\n🐦 Twitter : ${user.twitter}\n📘 Facebook : ${user.facebook}\n📸 Instagram : ${user.instagram}\n🖼️ Capture : ${user.proof}\n📅 Date : ${user.date}`;
-  bot.sendMessage(chatId, info, { parse_mode: 'Markdown' });
-});
-
-// === Commande /export (ADMIN) ===
-bot.onText(/\/export/, (msg) => {
-  const chatId = msg.chat.id.toString();
-  if (!ADMIN_IDS.includes(chatId)) return bot.sendMessage(chatId, "⛔️ Accès refusé. Commande réservée à l’admin.");
-
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-  const csv = parse(data, { fields: ['telegram_id', 'username', 'wallet', 'twitter', 'facebook', 'instagram', 'proof', 'date'] });
-  const filePath = './participants.csv';
-  fs.writeFileSync(filePath, csv);
-  bot.sendDocument(chatId, filePath);
-});
-
-// === Commande /list (ADMIN) ===
-bot.onText(/\/list/, (msg) => {
-  const chatId = msg.chat.id.toString();
-  if (!ADMIN_IDS.includes(chatId)) return bot.sendMessage(chatId, "⛔️ Accès refusé. Commande réservée à l’admin.");
-
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-  if (data.length === 0) return bot.sendMessage(chatId, "Aucun participant enregistré.");
-
-  const usernames = data.map(u => `@${u.username || 'inconnu'}`).join('\n');
-  bot.sendMessage(chatId, `📋 *Participants :*\n\n${usernames}`, { parse_mode: 'Markdown' });
-});
-
-// === Commande /delete [username] (ADMIN) ===
-bot.onText(/\/delete (.+)/, (msg, match) => {
-  const chatId = msg.chat.id.toString();
-  const usernameToDelete = match[1].replace('@', '').trim().toLowerCase();
-  if (!ADMIN_IDS.includes(chatId)) return bot.sendMessage(chatId, "⛔️ Accès refusé. Commande réservée à l’admin.");
-
-  const data = JSON.parse(fs.readFileSync(DATA_FILE));
-  const filtered = data.filter(u => (u.username || '').toLowerCase() !== usernameToDelete);
-
-  if (filtered.length === data.length) return bot.sendMessage(chatId, `❌ Aucun utilisateur trouvé avec le nom : @${usernameToDelete}`);
-
-  fs.writeFileSync(DATA_FILE, JSON.stringify(filtered, null, 2));
-  const logEntry = `[${new Date().toISOString()}] SUPPRESSION : @${usernameToDelete} par ${msg.from.username || 'admin'} (${chatId})\n`;
-  fs.appendFileSync('log.txt', logEntry);
-
-  bot.sendMessage(chatId, `✅ Utilisateur @${usernameToDelete} supprimé avec succès.`);
-});
-
-// === Traitement principal ===
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
-  if (!sessions[chatId]) return;
-  const user = sessions[chatId];
-  const text = msg.text ? msg.text.trim() : '';
-  if (['/start', '/status', '/export', '/list'].includes(text)) return;
-
-  switch (user.step) {
-    case 'wallet':
-      if (!/^0x[a-fA-F0-9]{40}$/.test(text)) return bot.sendMessage(chatId, "❌ Adresse invalide. Elle doit commencer par 0x et contenir 42 caractères.");
-      user.wallet = text; user.step = 'twitter';
-      bot.sendMessage(chatId, "Étape 2️⃣ : Ton pseudo Twitter ? (ex : @monpseudo)");
-      break;
-
-    case 'twitter':
-      user.twitter = text; user.step = 'facebook';
-      bot.sendMessage(chatId, "Étape 3️⃣ : Ton nom d'utilisateur Facebook ?");
-      break;
-
-    case 'facebook':
-      user.facebook = text; user.step = 'instagram';
-      bot.sendMessage(chatId, "Étape 4️⃣ : Ton pseudo Instagram ?");
-      break;
-
-    case 'instagram':
-      user.instagram = text; user.step = 'proof';
-      bot.sendMessage(chatId, "Étape 5️⃣ : Envoie une capture d’écran de preuve 📸");
-      break;
-
-    case 'proof':
-      if (msg.photo && msg.photo.length > 0) {
-        const photo = msg.photo[msg.photo.length - 1];
-        const fileId = photo.file_id;
-
-        bot.getFileLink(fileId).then(fileUrl => {
-          const fileName = `proof_${user.username}_${Date.now()}.jpg`;
-          const filePath = path.join(proofsDir, fileName);
-          const file = fs.createWriteStream(filePath);
-
-          https.get(fileUrl, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-              file.close();
-              user.proof = fileName;
-              user.step = 'done';
-              saveUser(user);
-              delete sessions[chatId];
-
-              bot.sendMessage(chatId, `🎉 Félicitations !\n\n✅ Ta capture est enregistrée.\n\n📢 Bonus : Gagne 50 MBOA par filleul.\n il te suffit de partager ton lien ffilié que tu as reçu par e-mail juste après ton inscription; Les primes des filleuls sont envoyés chaque samedi dans votre wallet.\n\nMerci pour ta participation 🙏`);
-            });
-          });
-        });
-      } else {
-        bot.sendMessage(chatId, "❌ Envoie une image comme capture d’écran.");
-      }
-      break;
+// Command: /wallet
+bot.command('wallet', ctx => {
+  const id = ctx.from.id;
+  const message = ctx.message.text.split(' ')[1];
+  if (message && /^0x[a-fA-F0-9]{40}$/.test(message)) {
+    users[id].tasks.wallet = message;
+    saveUsers();
+    ctx.reply('✅ Adresse BEP20 enregistrée !');
+  } else {
+    ctx.reply('❌ Adresse invalide. Format attendu : 0x...');
   }
 });
+
+// Command: /proofs
+bot.command('proofs', ctx => {
+  ctx.reply('📸 Envoie tes captures Twitter, Telegram, Facebook, Instagram ici. Je vais les stocker.');
+});
+
+bot.on('photo', ctx => {
+  const id = ctx.from.id;
+  if (!users[id]) return;
+  users[id].tasks.proofs = true;
+  saveUsers();
+  ctx.reply('✅ Captures enregistrées.');
+});
+
+// Command: /taches
+bot.command('taches', ctx => {
+  ctx.reply(`📝 Étapes à compléter :
+1. Ajouter une adresse BEP20 (/wallet)
+2. Suivre nos réseaux et envoyer les preuves (/proofs)
+3. Rejoins notre groupe Telegram : https://t.me/...
+4. Découvre notre offre Ambassadeur : [Devenir Ambassadeur](https://airdrop.mboacoin.com/membrefondateur)
+`);
+});
+
+// Command: /status
+bot.command('status', ctx => {
+  const user = users[ctx.from.id];
+  if (!user) return ctx.reply('Utilisateur non trouvé.');
+  const t = user.tasks;
+  ctx.reply(`📊 Ton statut :
+- Wallet : ${t.wallet ? '✅' : '⛔'}
+- Preuves : ${t.proofs ? '✅' : '⛔'}
+- Filleuls validés : ${user.filleuls.filter(f => users[f]?.tasks?.proofs).length}
+- Total MBOA : ${user.totalMBOA}`);
+});
+
+// Command: /mesfilleuls
+bot.command('mesfilleuls', ctx => {
+  const user = users[ctx.from.id];
+  if (!user?.filleuls?.length) return ctx.reply('Aucun filleul trouvé.');
+  let text = '👥 Tes filleuls :\n';
+  user.filleuls.forEach(fid => {
+    const filleul = users[fid];
+    const status = filleul?.tasks?.proofs ? '✅ Validé' : '⛔ Incomplet';
+    text += `- @${filleul?.username || fid} – ${status}\n`;
+  });
+  ctx.reply(text);
+});
+
+// Command: /leaderboard
+bot.command('leaderboard', ctx => {
+  const leaderboard = Object.entries(users)
+    .map(([id, user]) => ({
+      id,
+      username: user.username || `ID:${id}`,
+      count: user.filleuls?.filter(fid => users[fid]?.tasks?.proofs).length || 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  let text = '🏆 Classement des meilleurs parrains MBOACOIN :\n\n';
+  leaderboard.forEach((entry, i) => {
+    text += `${i + 1}. @${entry.username} – ${entry.count} filleul(s) validé(s)\n`;
+  });
+
+  const currentUser = users[ctx.from.id];
+  const myCount = currentUser?.filleuls?.filter(fid => users[fid]?.tasks?.proofs).length || 0;
+
+  const myRank = leaderboard.findIndex(entry => entry.id === String(ctx.from.id));
+  if (myRank === -1) {
+    text += `\n👤 Tu n’es pas encore dans le Top 10, mais tu as ${myCount} filleul(s) validé(s). Continue de partager ton lien ! 🚀`;
+  } else {
+    text += `\n🥳 Tu es actuellement #${myRank + 1} avec ${myCount} filleul(s) validé(s) !`;
+  }
+
+  ctx.reply(text);
+});
+
+// Command: /parrainage
+bot.command('parrainage', ctx => {
+  ctx.reply(`🔗 Voici ton lien de parrainage :
+https://t.me/MboaCoinAirdropBot?start=${ctx.from.id}`);
+});
+
+// Command: /export
+bot.command('export', ctx => {
+  if (ctx.from.id !== adminId) return;
+  const fields = ['id', 'username', 'tasks.wallet', 'tasks.proofs', 'filleuls.length', 'totalMBOA'];
+  const parser = new Parser({ fields });
+  const csv = parser.parse(Object.values(users).map(u => ({
+    id: u.id,
+    username: u.username,
+    'tasks.wallet': u.tasks.wallet,
+    'tasks.proofs': u.tasks.proofs,
+    'filleuls.length': u.filleuls.length,
+    totalMBOA: u.totalMBOA
+  })));
+  const fileName = `export_${new Date().toISOString().split('T')[0]}.csv`;
+  fs.writeFileSync(fileName, csv);
+  ctx.replyWithDocument({ source: fileName, filename: fileName });
+});
+
+// Récompense automatique filleul
+function notifyReferrer(filleulId) {
+  const filleul = users[filleulId];
+  const parrainId = filleul?.parrain;
+  if (!parrainId || !users[parrainId]) return;
+  const parrain = users[parrainId];
+  if (!parrain.notifiedFilleuls) parrain.notifiedFilleuls = [];
+  if (!parrain.notifiedFilleuls.includes(filleulId) && filleul.tasks?.proofs) {
+    parrain.totalMBOA += 50;
+    parrain.notifiedFilleuls.push(filleulId);
+    bot.telegram.sendMessage(parrainId, `🎉 Ton filleul @${filleul.username} a complété toutes les étapes ! Tu viens de gagner 50 MBOA.`);
+    saveUsers();
+  }
+}
+
+// Vérification quotidienne
+setInterval(() => {
+  Object.keys(users).forEach(id => notifyReferrer(id));
+}, 60 * 60 * 1000); // chaque heure
+
+// Export automatique chaque samedi à 18h
+schedule.scheduleJob('0 18 * * 6', () => {
+  const fields = ['id', 'username', 'tasks.wallet', 'tasks.proofs', 'filleuls.length', 'totalMBOA'];
+  const parser = new Parser({ fields });
+  const csv = parser.parse(Object.values(users).map(u => ({
+    id: u.id,
+    username: u.username,
+    'tasks.wallet': u.tasks.wallet,
+    'tasks.proofs': u.tasks.proofs,
+    'filleuls.length': u.filleuls.length,
+    totalMBOA: u.totalMBOA
+  })));
+  const fileName = `export_auto.csv`;
+  fs.writeFileSync(fileName, csv);
+  bot.telegram.sendDocument(adminId, { source: fileName, filename: fileName });
+});
+
+bot.launch();
