@@ -10,7 +10,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "fs": "^0.0.1-security",
     "json2csv": "^6.0.0-alpha.2",
-    "node-telegram-bot-api": "^0.66.0"
-  }
+    "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.66.0",
+    "telegraf": "^4.16.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/videldemesse/mboabot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/videldemesse/mboabot/issues"
+  },
+  "homepage": "https://github.com/videldemesse/mboabot#readme"
 }
