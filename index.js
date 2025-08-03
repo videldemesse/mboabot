@@ -53,84 +53,43 @@ BOT.start(async (ctx) => {
 });
 
 // 🔄 Étapes successives
-BOT.on('text', async (ctx) => {
+// Gestion des preuves par capture
+BOT.on('photo', async (ctx) => {
     const users = readUsers();
     const id = ctx.from.id;
-    const message = ctx.message.text.toLowerCase();
+    const step = users[id]?.nextStep;
 
-    if (!users[id] || !users[id].nextStep) return;
+    if (!step) return;
 
-    switch (users[id].nextStep) {
-        case 'telegram':
-            if (message.includes('fait')) {
-                users[id].tasks.telegram = true;
-                users[id].nextStep = 'facebook';
-                await ctx.reply("✅ Bien reçu !\nMaintenant, abonne-toi à notre page Facebook :\nhttps://www.facebook.com/profile.php?id=61578396563477\n\nPuis envoie une capture.");
-            }
-            break;
+    const photo = ctx.message.photo;
+    if (!photo) return;
 
+    switch (step) {
         case 'facebook':
-            if (ctx.message.photo) {
-                users[id].tasks.facebook = true;
-                users[id].tasks.proofs.facebook = ctx.message.photo;
-                users[id].nextStep = 'instagram';
-                await ctx.reply("✅ Facebook validé !\nMaintenant, abonne-toi à notre Instagram : https://www.instagram.com/mboa_coin/\nPuis envoie une capture.");
-            }
+            users[id].tasks.facebook = true;
+            users[id].tasks.proofs.facebook = photo;
+            users[id].nextStep = 'instagram';
+            await ctx.reply("✅ Facebook validé !\nMaintenant, abonne-toi à notre Instagram : https://www.instagram.com/mboa_coin/\nPuis envoie une capture.");
             break;
 
         case 'instagram':
-            if (ctx.message.photo) {
-                users[id].tasks.instagram = true;
-                users[id].tasks.proofs.instagram = ctx.message.photo;
-                users[id].nextStep = 'twitter';
-                await ctx.reply("✅ Instagram validé !\nMaintenant, suis notre Twitter : https://x.com/MboaCoin\nPuis envoie une capture.");
-            }
+            users[id].tasks.instagram = true;
+            users[id].tasks.proofs.instagram = photo;
+            users[id].nextStep = 'twitter';
+            await ctx.reply("✅ Instagram validé !\nMaintenant, suis notre Twitter : https://x.com/MboaCoin\nPuis envoie une capture.");
             break;
 
         case 'twitter':
-            if (ctx.message.photo) {
-                users[id].tasks.twitter = true;
-                users[id].tasks.proofs.twitter = ctx.message.photo;
-                users[id].nextStep = 'wallet';
-                await ctx.reply("✅ Twitter validé !\nMaintenant, envoie ton adresse de wallet BEP20 (commence par 0x...).");
-            }
-            break;
-
-        case 'wallet':
-            if (message.startsWith('0x') && message.length === 42) {
-                users[id].tasks.wallet = message;
-                users[id].nextStep = null;
-                users[id].validated = true;
-                users[id].mboa += 200;
-
-                await ctx.reply("🎉 Félicitations ! Tu as gagné 200 MBOA pour avoir complété toutes les étapes.");
-
-                const link = `https://t.me/mboacoin_bot?start=${id}`;
-                await ctx.reply(`🔗 Voici ton lien de parrainage :\n${link}`);
-
-                await ctx.reply(
-                    "🔥 Tu peux maintenant devenir Ambassadeur MBOACOIN et recevoir 10.000 MBOA + un NFT exclusif !",
-                    Markup.inlineKeyboard([
-                        [Markup.button.url("✅ Recevoir l’offre", "https://airdrop.mboacoin.com/membrefondateur")],
-                        [Markup.button.callback("❌ Décliner", "decline_offer")]
-                    ])
-                );
-
-                if (users[id].referrer && users[users[id].referrer]) {
-                    users[users[id].referrer].mboa += 50;
-                    await BOT.telegram.sendMessage(
-                        users[id].referrer,
-                        `🎉 Ton filleul @${ctx.from.username} a complété toutes les étapes ! Tu gagnes 50 MBOA.`
-                    );
-                }
-            } else {
-                await ctx.reply("❌ Adresse invalide. Elle doit commencer par '0x' et contenir 42 caractères.");
-            }
+            users[id].tasks.twitter = true;
+            users[id].tasks.proofs.twitter = photo;
+            users[id].nextStep = 'wallet';
+            await ctx.reply("✅ Twitter validé !\nMaintenant, envoie ton adresse de wallet BEP20 (commence par 0x...).");
             break;
     }
 
     writeUsers(users);
 });
+
 
 // 📦 Commandes
 BOT.command('status', (ctx) => {
