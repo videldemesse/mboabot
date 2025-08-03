@@ -1,15 +1,19 @@
 {
-  "name": "mboacoin-airdrop-bot",
+  "name": "mboabot",
   "version": "1.0.0",
-  "description": "Bot Telegram pour gérer l’airdrop de MboaCoin avec parrainage, preuve, export CSV, et NFT Ambassadeur.",
+  "description": "Bot Telegram pour gérer l'airdrop et le parrainage MboaCoin",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "json2csv": "^6.0.0-alpha.2",
-    "node-schedule": "^2.1.1",
-    "telegraf": "^4.12.2"
+    "telegraf": "^4.12.2",
+    "fs-extra": "^11.2.0",
+    "csv-writer": "^1.6.0",
+    "node-cron": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "author": "MBOA GROUP INC",
   "license": "MIT"
