@@ -1,143 +1,147 @@
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
+const schedule = require('node-schedule');
 const path = require('path');
 
 const bot = new Telegraf('8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y');
-const ADMIN_ID = 6686188145;
-const USERS_FILE = './users.json';
+const adminId = 6686188145;
+const dataPath = path.join(__dirname, 'users.json');
 
-function loadUsers() {
-    if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '{}');
-    return JSON.parse(fs.readFileSync(USERS_FILE));
+let users = {};
+if (fs.existsSync(dataPath)) {
+  users = JSON.parse(fs.readFileSync(dataPath));
 }
 
-function saveUsers(users) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+// Sauvegarde automatique
+function saveUsers() {
+  fs.writeFileSync(dataPath, JSON.stringify(users, null, 2));
 }
 
-function getNextStep(user) {
-    const steps = [
-        'telegram',
-        'facebook',
-        'instagram',
-        'twitter',
-        'wallet'
-    ];
-    return steps.find(step => !user.tasks[step]);
+// Récompense par étape
+const steps = [
+  { key: 'telegram', msg: '✅ Étape 1 : Rejoins notre canal Telegram : https://t.me/+BdnXzUlUlc9lZTc0\n\nUne fois fait, tape : `fait`', reward: 100 },
+  { key: 'facebook', msg: '✅ Étape 2 : Abonne-toi et interagis à une publication sur notre page Facebook : https://www.facebook.com/profile.php?id=61578396563477\n\nPuis envoie une capture d\'écran.', reward: 150 },
+  { key: 'instagram', msg: '✅ Étape 3 : Abonne-toi à notre Instagram : https://www.instagram.com/mboa_coin/\n\nPuis envoie une capture d\'écran.', reward: 150 },
+  { key: 'twitter', msg: '✅ Étape 4 : Abonne-toi et interagis avec un post sur notre Twitter : https://x.com/MboaCoin\n\nPuis envoie une capture d\'écran.', reward: 150 },
+  { key: 'wallet', msg: '✅ Étape 5 : Envoie ton adresse BEP20 (BNB Smart Chain).', reward: 200 }
+];
+
+// Fonction pour envoyer l'étape suivante
+function sendNextStep(ctx) {
+  const user = users[ctx.from.id];
+  const next = steps.find(step => !user.steps[step.key]);
+  if (next) {
+    ctx.reply(next.msg);
+  } else {
+    const link = `https://airdrop.mboacoin.com/membrefondateur?ref=${ctx.from.id}`;
+    ctx.reply(`🎉 Félicitations ! Tu as terminé toutes les étapes.\n\nVoici ton lien de parrainage : ${link}\n\n👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA !`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🔥 Recevoir l'offre", url: link }],
+          [{ text: "❌ Décliner l'offre", callback_data: 'decline_offer' }]
+        ]
+      }
+    });
+  }
 }
 
-bot.start((ctx) => {
-    const users = loadUsers();
-    const id = ctx.from.id;
-    if (!users[id]) {
-        users[id] = {
-            username: ctx.from.username,
-            tasks: { telegram: false, facebook: false, instagram: false, twitter: false, wallet: false },
-            proofs: {},
-            mboa: 0,
-            referrals: [],
-            step: 'telegram',
-            invited_by: null
-        };
-        saveUsers(users);
-    }
-    ctx.reply("👋 Bienvenue sur le Airdrop MBOACOIN !
-
-Pour commencer, veuillez rejoindre notre canal Telegram : https://t.me/mboacoin
-Puis tapez 'fait' ici.");
+// Commande /start
+bot.start(ctx => {
+  const userId = ctx.from.id;
+  if (!users[userId]) {
+    users[userId] = {
+      id: userId,
+      username: ctx.from.username || '',
+      steps: {},
+      rewards: 0,
+      referrals: [],
+      wallet: '',
+      affiliate: '',
+      invited_by: ''
+    };
+  }
+  ctx.reply("👋 Bienvenue sur le Airdrop MBOACOIN !");
+  saveUsers();
+  sendNextStep(ctx);
 });
 
-bot.hears('fait', (ctx) => {
-    const users = loadUsers();
-    const id = ctx.from.id;
-    const user = users[id];
-    const step = user.step;
+// Gestion des messages utilisateur
+bot.on('text', ctx => {
+  const userId = ctx.from.id;
+  const user = users[userId];
 
-    if (step === 'telegram') {
-        user.tasks.telegram = true;
-        user.mboa += 50;
-        user.step = 'facebook';
-        ctx.reply("✅ Merci ! Vous avez gagné 50 MBOA 🎉
+  if (!user) return ctx.reply("Erreur interne. Tape /start pour recommencer.");
 
-Étape suivante : Abonnez-vous à notre page Facebook et commentez une publication : https://www.facebook.com/profile.php?id=61578396563477
-Envoyez une capture d'écran ici.");
-    } else if (step === 'facebook') {
-        ctx.reply("📸 Merci ! Capture bien reçue.
-Étape suivante : Abonnez-vous à notre Instagram : https://www.instagram.com/mboa_coin/
-Envoyez une capture d'écran ici.");
-        user.tasks.facebook = true;
-        user.mboa += 50;
-        user.step = 'instagram';
-    } else if (step === 'instagram') {
-        ctx.reply("📸 Merci !
-Étape suivante : Abonnez-vous à notre Twitter : https://x.com/MboaCoin
-Envoyez une capture d'écran ici.");
-        user.tasks.instagram = true;
-        user.mboa += 50;
-        user.step = 'twitter';
-    } else if (step === 'twitter') {
-        ctx.reply("📸 Merci !
-Dernière étape : Envoyez votre adresse BEP20 (commençant par 0x...)");
-        user.tasks.twitter = true;
-        user.mboa += 50;
-        user.step = 'wallet';
-    } else {
-        ctx.reply("✅ Toutes les étapes sont complétées ! 🎉");
-    }
-    saveUsers(users);
+  const currentStep = steps.find(step => !user.steps[step.key]);
+  if (!currentStep) return;
+
+  if (currentStep.key === 'telegram' && ctx.message.text.toLowerCase().includes('fait')) {
+    user.steps.telegram = true;
+    user.rewards += currentStep.reward;
+    ctx.reply(`✅ Étape validée. Tu as gagné ${currentStep.reward} MBOA.`);
+    saveUsers();
+    return sendNextStep(ctx);
+  }
+
+  if (currentStep.key === 'wallet' && ctx.message.text.startsWith('0x')) {
+    user.wallet = ctx.message.text;
+    user.steps.wallet = true;
+    user.rewards += currentStep.reward;
+    ctx.reply(`✅ Adresse BEP20 reçue. ${currentStep.reward} MBOA ajoutés.`);
+    saveUsers();
+    return sendNextStep(ctx);
+  }
+
+  ctx.reply("Merci ! Veuillez patienter pendant que nous validons votre soumission.");
 });
 
-bot.hears(/^0x[a-fA-F0-9]{40}$/, (ctx) => {
-    const users = loadUsers();
-    const id = ctx.from.id;
-    const user = users[id];
+// Gestion des captures
+bot.on('photo', ctx => {
+  const userId = ctx.from.id;
+  const user = users[userId];
+  if (!user) return;
 
-    if (user.step === 'wallet') {
-        user.wallet = ctx.message.text;
-        user.tasks.wallet = true;
-        user.mboa += 100;
-        user.step = 'done';
-        ctx.reply("🎉 Félicitations ! Vous avez terminé toutes les étapes et gagné 300 MBOA.
-Voici votre lien de parrainage : https://t.me/MboaCoinBot?start=" + id);
-        ctx.reply("💎 Pour aller plus loin, devenez Ambassadeur MBOACOIN et recevez 10 000 MBOA + avantages exclusifs", {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🚀 Recevoir l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
-                    [{ text: "❌ Décliner l'offre", callback_data: "decline_offer" }]
-                ]
-            }
-        });
-        saveUsers(users);
-    }
+  const currentStep = steps.find(step => !user.steps[step.key]);
+  if (!currentStep || ['facebook', 'instagram', 'twitter'].indexOf(currentStep.key) === -1) return;
+
+  user.steps[currentStep.key] = true;
+  user.rewards += currentStep.reward;
+  ctx.reply(`✅ Capture reçue. Tu gagnes ${currentStep.reward} MBOA.`);
+  saveUsers();
+  sendNextStep(ctx);
 });
 
-bot.command('status', (ctx) => {
-    const users = loadUsers();
-    const id = ctx.from.id;
-    const user = users[id];
-    ctx.reply(`📊 Tâches complétées :
-Telegram: ${user.tasks.telegram ? '✅' : '❌'}
-Facebook: ${user.tasks.facebook ? '✅' : '❌'}
-Instagram: ${user.tasks.instagram ? '✅' : '❌'}
-Twitter: ${user.tasks.twitter ? '✅' : '❌'}
-Wallet: ${user.tasks.wallet ? '✅' : '❌'}
-
-Total MBOA: ${user.mboa}`);
+// Commande /status
+bot.command('status', ctx => {
+  const user = users[ctx.from.id];
+  if (!user) return ctx.reply("Aucune donnée. Tape /start pour commencer.");
+  ctx.reply(`📊 Ton statut :\n\nÉtapes complétées : ${Object.keys(user.steps).length}/${steps.length}\nTotal MBOA : ${user.rewards}`);
 });
 
-bot.command('export', (ctx) => {
-    if (ctx.from.id === ADMIN_ID) {
-        const data = loadUsers();
-        const csv = ['Username,TelegramID,MBOA,Wallet'];
-        Object.entries(data).forEach(([id, user]) => {
-            csv.push(`${user.username},${id},${user.mboa},${user.wallet || ''}`);
-        });
-        fs.writeFileSync('./export.csv', csv.join('
-'));
-        ctx.reply('✅ Export CSV généré avec succès !');
-    } else {
-        ctx.reply('⛔️ Accès refusé.');
-    }
+// Commande /mesfilleuls
+bot.command('mesfilleuls', ctx => {
+  const user = users[ctx.from.id];
+  if (!user) return ctx.reply("Aucun filleul trouvé.");
+  const filleuls = user.referrals.map(id => users[id]?.steps).filter(f => f && Object.keys(f).length === steps.length).length;
+  ctx.reply(`👥 Tu as ${filleuls} filleuls validés.`);
 });
 
-bot.launch();
+// Admin: /export
+bot.command('export', ctx => {
+  if (ctx.from.id != adminId) return;
+  const csv = Object.values(users).map(u =>
+    [u.id, u.username, u.wallet, u.rewards, Object.keys(u.steps).length, u.referrals.length].join(',')
+  ).join('\n');
+  fs.writeFileSync('export.csv', csv);
+  ctx.reply("✅ Export CSV généré.");
+});
+
+// Schedule export auto samedi à 18h
+schedule.scheduleJob('0 18 * * 6', () => {
+  const csv = Object.values(users).map(u =>
+    [u.id, u.username, u.wallet, u.rewards, Object.keys(u.steps).length, u.referrals.length].join(',')
+  ).join('\n');
+  fs.writeFileSync('export.csv', csv);
+});
+
+bot.launch().then(() => console.log("✅ MboaBot lancé."));
