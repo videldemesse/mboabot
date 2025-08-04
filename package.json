@@ -1,14 +1,16 @@
 {
   "name": "mboacoin-airdrop-bot",
   "version": "1.0.0",
+  "description": "Bot Telegram Airdrop MboaCoin avec vérification, parrainage, export CSV, et système NFT.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "telegraf": "^4.12.2",
-    "fast-csv": "^4.3.6",
-    "fs": "0.0.1-security",
-    "node-schedule": "^2.1.1"
+    "axios": "^1.6.7",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.4.5",
+    "fs": "^0.0.1-security",
+    "node-telegram-bot-api": "^0.61.0"
   }
 }

@@ -1,0 +1,136 @@
+{
+  "6686188145": {
+    "id": 6686188145,
+    "steps": {},
+    "referrals": [],
+    "mboas": 0,
+    "refLink": "",
+    "isAmbassador": false,
+    "username": "vddukmer",
+    "step": 6,
+    "proofs": {
+      "telegram": [
+        {
+          "file_id": "AgACAgEAAxkBAAPFaJAYRVMMyQdw1YTGAAHDnR295VjxAALbsTEb5J6ARAAB4XnrbPu7MAEAAwIAA3MAAzYE",
+          "file_unique_id": "AQAD27ExG-SegER4",
+          "file_size": 1402,
+          "width": 67,
+          "height": 90
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAPFaJAYRVMMyQdw1YTGAAHDnR295VjxAALbsTEb5J6ARAAB4XnrbPu7MAEAAwIAA20AAzYE",
+          "file_unique_id": "AQAD27ExG-SegERy",
+          "file_size": 20193,
+          "width": 240,
+          "height": 320
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAPFaJAYRVMMyQdw1YTGAAHDnR295VjxAALbsTEb5J6ARAAB4XnrbPu7MAEAAwIAA3gAAzYE",
+          "file_unique_id": "AQAD27ExG-SegER9",
+          "file_size": 79970,
+          "width": 600,
+          "height": 800
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAPFaJAYRVMMyQdw1YTGAAHDnR295VjxAALbsTEb5J6ARAAB4XnrbPu7MAEAAwIAA3kAAzYE",
+          "file_unique_id": "AQAD27ExG-SegER-",
+          "file_size": 101617,
+          "width": 960,
+          "height": 1280
+        }
+      ],
+      "facebook": [
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAANzAAM2BA",
+          "file_unique_id": "AQADTbExG-SegER4",
+          "file_size": 1236,
+          "width": 42,
+          "height": 90
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAANtAAM2BA",
+          "file_unique_id": "AQADTbExG-SegERy",
+          "file_size": 16576,
+          "width": 148,
+          "height": 320
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAAN4AAM2BA",
+          "file_unique_id": "AQADTbExG-SegER9",
+          "file_size": 69365,
+          "width": 369,
+          "height": 800
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAAN5AAM2BA",
+          "file_unique_id": "AQADTbExG-SegER-",
+          "file_size": 93022,
+          "width": 591,
+          "height": 1280
+        }
+      ],
+      "instagram": [
+        {
+          "file_id": "AgACAgEAAxkBAANxaI7qugqE8U8lzN9KcKFgCY_gkxoAAnOvMRvcnXhEEG1VVQqBCxYBAAMCAANzAAM2BA",
+          "file_unique_id": "AQADc68xG9ydeER4",
+          "file_size": 1229,
+          "width": 42,
+          "height": 90
+        },
+        {
+          "file_id": "AgACAgEAAxkBAANxaI7qugqE8U8lzN9KcKFgCY_gkxoAAnOvMRvcnXhEEG1VVQqBCxYBAAMCAANtAAM2BA",
+          "file_unique_id": "AQADc68xG9ydeERy",
+          "file_size": 16412,
+          "width": 148,
+          "height": 320
+        },
+        {
+          "file_id": "AgACAgEAAxkBAANxaI7qugqE8U8lzN9KcKFgCY_gkxoAAnOvMRvcnXhEEG1VVQqBCxYBAAMCAAN4AAM2BA",
+          "file_unique_id": "AQADc68xG9ydeER9",
+          "file_size": 68520,
+          "width": 369,
+          "height": 800
+        },
+        {
+          "file_id": "AgACAgEAAxkBAANxaI7qugqE8U8lzN9KcKFgCY_gkxoAAnOvMRvcnXhEEG1VVQqBCxYBAAMCAAN5AAM2BA",
+          "file_unique_id": "AQADc68xG9ydeER-",
+          "file_size": 92133,
+          "width": 591,
+          "height": 1280
+        }
+      ],
+      "twitter": [
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAANzAAM2BA",
+          "file_unique_id": "AQADTbExG-SegER4",
+          "file_size": 1236,
+          "width": 42,
+          "height": 90
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAANtAAM2BA",
+          "file_unique_id": "AQADTbExG-SegERy",
+          "file_size": 16576,
+          "width": 148,
+          "height": 320
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAAN4AAM2BA",
+          "file_unique_id": "AQADTbExG-SegER9",
+          "file_size": 69365,
+          "width": 369,
+          "height": 800
+        },
+        {
+          "file_id": "AgACAgEAAxkBAAOtaI-lEuH0irho8MR6N_c-gIvlWssAAk2xMRvknoBEjJ8pT53Ul_YBAAMCAAN5AAM2BA",
+          "file_unique_id": "AQADTbExG-SegER-",
+          "file_size": 93022,
+          "width": 591,
+          "height": 1280
+        }
+      ]
+    },
+    "wallet": "0xf18176a46ACf41121F0e39B861EC6dA6627e2E38",
+    "rewards": null
+  }
+}
