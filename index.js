@@ -66,7 +66,7 @@ bot.onText(/\/start(?: (\d+))?/, (msg, match) => {
 📌 Étape 1 : Rejoins notre canal Telegram :
 👉 https://t.me/+q5siBqhkQCFiNDcx
 
-Envoie une capture d’écran comme preuve pour valider cette étape.`);
+Envoie une capture d'écran comme preuve pour valider cette étape.`);
   users[userId].step = 1;
   saveUsers();
 });
@@ -151,7 +151,7 @@ bot.on('message', (msg) => {
     bot.sendMessage(chatId, `🧠 Avant de recevoir tes MBOA, visite notre site officiel 👉 https://mboacoin.com puis réponds à ce petit quiz !\n\nQuestion 1 : Quel est le rôle principal de MboaCoin ?`, {
       reply_markup: {
         inline_keyboard: [
-          [{ text: "A. Investir dans l’immobilier", callback_data: "q1_wrong" }],
+          [{ text: "A. Investir dans l'immobilier", callback_data: "q1_wrong" }],
           [{ text: "B. Faciliter le commerce en Afrique", callback_data: "q1_correct" }],
           [{ text: "C. Envoyer des vidéos", callback_data: "q1_wrong" }]
         ]
@@ -160,11 +160,11 @@ bot.on('message', (msg) => {
     return;
 
 
-🔗 Partage ton lien d’affiliation pour gagner 25 MBOA par filleul validé !
+🔗 Partage ton lien d'affiliation pour gagner 25 MBOA par filleul validé !
 
 💰 Les MBOA seront crédités dans ton portefeuille chaque samedi selon ton nombre de filleuls validés.
 
-🔔 Tu recevras une notification à chaque fois qu’un filleul est validé.
+🔔 Tu recevras une notification à chaque fois qu'un filleul est validé.
 
 🏆 Les 10 meilleurs parrains de la semaine recevront chacun 1000 MBOA !
 
@@ -173,7 +173,7 @@ bot.on('message', (msg) => {
 👇 Clique sur le bouton ci-dessous pour en savoir plus.`, {
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🚀 Recevoir l’offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
+          [{ text: "🚀 Recevoir l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
           [{ text: "❌ Pas intéressé", callback_data: "decline_offer" }]
         ]
       }
@@ -192,7 +192,7 @@ bot.on('callback_query', (query) => {
 
 - 💰 25 MBOA par filleul validé
 - 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10
-- 🔔 Notification à chaque fois qu’un filleul valide toutes ses étapes
+- 🔔 Notification à chaque fois qu'un filleul valide toutes ses étapes
 
 📊 Clique ici pour voir le classement (à venir).`);
   }
@@ -296,10 +296,10 @@ bot.on('callback_query', (query) => {
 
     if (score >= 2) {
       users[userId].rewards += 30;
-      bot.sendMessage(chatId, `🎉 Bravo ! Tu as bien répondu au quiz (score : ${score}/3).\n\nTu as maintenant gagné 50 MBOA !\n\nVoici ton lien de parrainage personnalisé :\n👉 https://t.me/MboaCoinAirdropBot?start=${userId}\n\n💰 Partage-le pour gagner 25 MBOA par filleul validé !\n🏆 Les 10 meilleurs parrains de la semaine gagnent 1000 MBOA chacun.\n🔔 Tu recevras une notification dès qu’un filleul est validé.\n\n👇 Clique sur le bouton ci-dessous pour devenir Ambassadeur MBOACOIN et recevoir 10.000 MBOA de bienvenue !`, {
+      bot.sendMessage(chatId, `🎉 Bravo ! Tu as bien répondu au quiz (score : ${score}/3).\n\nTu as maintenant gagné 50 MBOA !\n\nVoici ton lien de parrainage personnalisé :\n👉 https://t.me/MboaCoinAirdropBot?start=${userId}\n\n💰 Partage-le pour gagner 25 MBOA par filleul validé !\n🏆 Les 10 meilleurs parrains de la semaine gagnent 1000 MBOA chacun.\n🔔 Tu recevras une notification dès qu'un filleul est validé.\n\n👇 Clique sur le bouton ci-dessous pour devenir Ambassadeur MBOACOIN et recevoir 10.000 MBOA de bienvenue !`, {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🚀 Recevoir l’offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
+            [{ text: "🚀 Recevoir l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
             [{ text: "❌ Pas intéressé", callback_data: "decline_offer" }]
           ]
         }
@@ -309,6 +309,6 @@ bot.on('callback_query', (query) => {
     }
     saveUsers();
   } else if (data === 'decline_offer') {
-    bot.sendMessage(chatId, `🙏 Merci pour ta participation !\n\n📢 Partage ton lien de parrainage autour de toi et gagne :\n\n- 💰 25 MBOA par filleul validé\n- 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10\n- 🔔 Notification à chaque fois qu’un filleul valide toutes ses étapes\n\n📊 Clique ici pour voir le classement (à venir).`);
+    bot.sendMessage(chatId, `🙏 Merci pour ta participation !\n\n📢 Partage ton lien de parrainage autour de toi et gagne :\n\n- 💰 25 MBOA par filleul validé\n- 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10\n- 🔔 Notification à chaque fois qu'un filleul valide toutes ses étapes\n\n📊 Clique ici pour voir le classement (à venir).`);
   }
 });
