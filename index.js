@@ -34,7 +34,7 @@ function generateReferralLink(userId) {
 bot.onText(/\/start(?: (\d+))?/, (msg, match) => {
   const userId = msg.from.id.toString();
   const chatId = msg.chat.id;
-  const user = users[userId];
+  user = users[userId];
 
   if (!users[userId]) {
     users[userId] = {
@@ -74,7 +74,7 @@ Envoie une capture d’écran comme preuve pour valider cette étape.`);
 bot.on('photo', (msg) => {
   const userId = msg.from.id.toString();
   const chatId = msg.chat.id;
-  const user = users[userId];
+  user = users[userId];
   if (!users[userId]) return;
 
   const step = getStep(users[userId]);
@@ -130,8 +130,8 @@ Puis envoie une capture.`);
 bot.on('message', (msg) => {
   const userId = msg.from.id.toString();
   const chatId = msg.chat.id;
-  const user = users[userId];
-  const user = users[userId];
+  user = users[userId];
+  user = users[userId];
   if (!user || user.step !== 5) return;
 
   if (msg.text && msg.text.startsWith('0x') && msg.text.length === 42) {
