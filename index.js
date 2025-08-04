@@ -137,7 +137,7 @@ bot.on('message', (msg) => {
   if (msg.text && msg.text.startsWith('0x') && msg.text.length === 42) {
     user.wallet = msg.text;
     user.step = 6;
-    user.rewards += 100;
+    user.rewards += 20;
     saveUsers();
 
     // Notifier le parrain
@@ -147,7 +147,18 @@ bot.on('message', (msg) => {
       saveUsers();
     }
 
-    bot.sendMessage(chatId, `🎉 Félicitations ! Tu as terminé toutes les étapes et gagné 50 MBOA.
+    
+    bot.sendMessage(chatId, `🧠 Avant de recevoir tes MBOA, visite notre site officiel 👉 https://mboacoin.com puis réponds à ce petit quiz !\n\nQuestion 1 : Quel est le rôle principal de MboaCoin ?`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "A. Investir dans l’immobilier", callback_data: "q1_wrong" }],
+          [{ text: "B. Faciliter le commerce en Afrique", callback_data: "q1_correct" }],
+          [{ text: "C. Envoyer des vidéos", callback_data: "q1_wrong" }]
+        ]
+      }
+    });
+    return;
+
 
 🔗 Partage ton lien d’affiliation pour gagner 25 MBOA par filleul validé !
 
@@ -241,4 +252,63 @@ bot.onText(/\/export/, (msg) => {
   csv.writeRecords(Object.values(users)).then(() => {
     bot.sendDocument(msg.chat.id, 'participants.csv');
   });
+});
+
+
+
+bot.on('callback_query', (query) => {
+  const userId = query.from.id.toString();
+  const chatId = query.message.chat.id;
+  const data = query.data;
+
+  if (!users[userId]) return;
+
+  users[userId].quiz = users[userId].quiz || { score: 0, step: 1 };
+
+  if (data.startsWith('q1_')) {
+    if (data === 'q1_correct') users[userId].quiz.score += 1;
+    users[userId].quiz.step = 2;
+    bot.sendMessage(chatId, `Question 2 : Quel est le nom de la super app de MboaCoin ?`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "A. MboaBank", callback_data: "q2_wrong" }],
+          [{ text: "B. MboaSend", callback_data: "q2_wrong" }],
+          [{ text: "C. MboaPay", callback_data: "q2_correct" }]
+        ]
+      }
+    });
+  } else if (data.startsWith('q2_')) {
+    if (data === 'q2_correct') users[userId].quiz.score += 1;
+    users[userId].quiz.step = 3;
+    bot.sendMessage(chatId, `Question 3 : Combien peut-on gagner en parrainant un filleul validé ?`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "A. 10 MBOA", callback_data: "q3_wrong" }],
+          [{ text: "B. 25 MBOA", callback_data: "q3_correct" }],
+          [{ text: "C. 100 MBOA", callback_data: "q3_wrong" }]
+        ]
+      }
+    });
+  } else if (data.startsWith('q3_')) {
+    if (data === 'q3_correct') users[userId].quiz.score += 1;
+    const score = users[userId].quiz.score;
+    delete users[userId].quiz;
+
+    if (score >= 2) {
+      users[userId].rewards += 30;
+      bot.sendMessage(chatId, `🎉 Bravo ! Tu as bien répondu au quiz (score : ${score}/3).\n\nTu as maintenant gagné 50 MBOA !\n\nVoici ton lien de parrainage personnalisé :\n👉 https://t.me/MboaCoinAirdropBot?start=${userId}\n\n💰 Partage-le pour gagner 25 MBOA par filleul validé !\n🏆 Les 10 meilleurs parrains de la semaine gagnent 1000 MBOA chacun.\n🔔 Tu recevras une notification dès qu’un filleul est validé.\n\n👇 Clique sur le bouton ci-dessous pour devenir Ambassadeur MBOACOIN et recevoir 10.000 MBOA de bienvenue !`, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🚀 Recevoir l’offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
+            [{ text: "❌ Pas intéressé", callback_data: "decline_offer" }]
+          ]
+        }
+      });
+    } else {
+      bot.sendMessage(chatId, `❌ Tu n'as pas obtenu assez de bonnes réponses (score : ${score}/3).\n\n🔁 Consulte https://mboacoin.com et retente ta chance avec /start.`);
+    }
+    saveUsers();
+  } else if (data === 'decline_offer') {
+    bot.sendMessage(chatId, `🙏 Merci pour ta participation !\n\n📢 Partage ton lien de parrainage autour de toi et gagne :\n\n- 💰 25 MBOA par filleul validé\n- 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10\n- 🔔 Notification à chaque fois qu’un filleul valide toutes ses étapes\n\n📊 Clique ici pour voir le classement (à venir).`);
+  }
 });
