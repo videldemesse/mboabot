@@ -1,314 +1,290 @@
+// MboaCoin Airdrop Bot - Version Finale Complète (liens réseaux corrigés)
+// Inclus : étapes 1-5, quiz 3 questions, attribution MBOA, parrainage, commandes, notifications, export hebdo
 
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
-const csvWriter = require('csv-writer').createObjectCsvWriter;
+const fs          = require('fs');
+const { createObjectCsvWriter } = require('csv-writer');
+const cron        = require('node-cron');
 
-const token = '8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y';
-const adminId = 6686188145;
-const bot = new TelegramBot(token, { polling: true });
+// === CONFIGURATION ===
+const token    = '8250952159:AAEWY6gV34Dp9Hx-KnwJ2ZWRgDtl8Utfl5Y';
+const adminId  = 6686188145;
+const dataFile = './users.json';
 
-let users = {};
-try {
-  users = JSON.parse(fs.readFileSync('users.json'));
-} catch {
-  users = {};
+// === INITIALISATION ===
+const bot   = new TelegramBot(token, { polling: true });
+let users   = {};
+if (fs.existsSync(dataFile)) {
+  users = JSON.parse(fs.readFileSync(dataFile));
 }
-
 function saveUsers() {
-  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
+  fs.writeFileSync(dataFile, JSON.stringify(users, null, 2));
 }
-
-function getStep(user) {
-  return user.step || 0;
-}
-
-function setStep(userId, step) {
-  users[userId].step = step;
-  saveUsers();
-}
-
 function generateReferralLink(userId) {
   return `https://t.me/MboaCoinAirdropBot?start=${userId}`;
 }
 
+// Quiz questions
+const quizQuestions = [
+  {
+    text:    "💡 Quelle est la mission de MboaCoin ?",
+    options: ["Créer une banque locale", "Faciliter le commerce intra-africain", "Remplacer le Bitcoin"],
+    answerIndex: 1
+  },
+  {
+    text:    "🌍 Quel est le symbole du token MboaCoin ?",
+    options: ["$MBA", "$MBO", "$MBC"],
+    answerIndex: 1
+  },
+  {
+    text:    "📲 Quelle app permet de stocker les MBOA ?",
+    options: ["MetaMask", "Trust Wallet", "MboaWallet"],
+    answerIndex: 2
+  }
+];
+
+// === COMMANDES ===
+// /start avec parrainage
 bot.onText(/\/start(?: (\d+))?/, (msg, match) => {
-  const userId = msg.from.id.toString();
-  const chatId = msg.chat.id;
-  user = users[userId];
-
-  if (!users[userId]) {
-    users[userId] = {
-      id: userId,
-      username: msg.from.username || '',
-      proofs: {},
-      referrals: [],
-      rewards: 0,
-      step: 0,
-      joinedAt: new Date().toISOString()
+  const chatId = msg.chat.id.toString(),
+        ref    = match[1];
+  if (!users[chatId]) {
+    users[chatId] = {
+      id:       chatId,
+      step:     1,
+      totalMBOA:0,
+      quizCount:0,
+      referrals:[],
+      referrer: ref && ref !== chatId ? ref : null
     };
-  }
-
-  // Enregistrer le parrain
-  if (match[1] && !users[userId].referrer && match[1] !== userId) {
-    const refId = match[1];
-    users[userId].referrer = refId;
-    if (!users[refId]) users[refId] = { id: refId, referrals: [] };
-    users[refId].referrals = users[refId].referrals || [];
-    if (!users[refId].referrals.includes(userId)) {
-      users[refId].referrals.push(userId);
+    if (users[chatId].referrer) {
+      users[ users[chatId].referrer ] = users[users[chatId].referrer] || { referrals: [] };
+      users[ users[chatId].referrer ].referrals.push(chatId);
     }
-  }
-
-  saveUsers();
-
-  bot.sendMessage(chatId, `👋 Bienvenue sur le Airdrop MBOACOIN !
-
-📌 Étape 1 : Rejoins notre canal Telegram :
-👉 https://t.me/+q5siBqhkQCFiNDcx
-
-Envoie une capture d'écran comme preuve pour valider cette étape.`);
-  users[userId].step = 1;
-  saveUsers();
-});
-
-bot.on('photo', (msg) => {
-  const userId = msg.from.id.toString();
-  const chatId = msg.chat.id;
-  user = users[userId];
-  if (!users[userId]) return;
-
-  const step = getStep(users[userId]);
-  users[userId].proofs = users[userId].proofs || {};
-
-  switch (step) {
-    case 1:
-      users[userId].proofs.telegram = msg.photo;
-      users[userId].step = 2;
-      user.rewards += 10;
-      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 1 validée !
-
-📌 Étape 2 : Aime notre page Facebook :
-👉 https://www.facebook.com/profile.php?id=61578396563477
-
-Puis envoie une capture.`);
-      break;
-    case 2:
-      users[userId].proofs.facebook = msg.photo;
-      users[userId].step = 3;
-      user.rewards += 10;
-      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 2 validée !
-
-📌 Étape 3 : Suis-nous sur Instagram :
-👉 https://www.instagram.com/mboa_coin/
-
-Puis envoie une capture.`);
-      break;
-    case 3:
-      users[userId].proofs.instagram = msg.photo;
-      users[userId].step = 4;
-      user.rewards += 10;
-      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 3 validée !
-
-📌 Étape 4 : Suis-nous sur Twitter :
-👉 https://x.com/MboaCoin
-
-Puis envoie une capture.`);
-      break;
-    case 4:
-      users[userId].proofs.twitter = msg.photo;
-      users[userId].step = 5;
-      user.rewards += 10;
-      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 4 validée !
-
-📌 Étape 5 : Envoie ton adresse BEP20 pour recevoir tes MBOA`);
-      break;
-  }
-
-  saveUsers();
-});
-
-bot.on('message', (msg) => {
-  const userId = msg.from.id.toString();
-  const chatId = msg.chat.id;
-  user = users[userId];
-  user = users[userId];
-  if (!user || user.step !== 5) return;
-
-  if (msg.text && msg.text.startsWith('0x') && msg.text.length === 42) {
-    user.wallet = msg.text;
-    user.step = 6;
-    user.rewards += 20;
     saveUsers();
-
-    // Notifier le parrain
-    if (user.referrer && users[user.referrer]) {
-      users[user.referrer].rewards = (users[user.referrer].rewards || 0) + 50;
-      bot.sendMessage(user.referrer, `🎉 Ton filleul @${user.username || userId} a complété toutes les étapes ! Tu viens de gagner 50 MBOA.`);
-      saveUsers();
-    }
-
-    
-    bot.sendMessage(chatId, `🧠 Avant de recevoir tes MBOA, visite notre site officiel 👉 https://mboacoin.com puis réponds à ce petit quiz !\n\nQuestion 1 : Quel est le rôle principal de MboaCoin ?`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "A. Investir dans l'immobilier", callback_data: "q1_wrong" }],
-          [{ text: "B. Faciliter le commerce en Afrique", callback_data: "q1_correct" }],
-          [{ text: "C. Envoyer des vidéos", callback_data: "q1_wrong" }]
-        ]
-      }
-    });
-    return;
-
-
-🔗 Partage ton lien d'affiliation pour gagner 25 MBOA par filleul validé !
-
-💰 Les MBOA seront crédités dans ton portefeuille chaque samedi selon ton nombre de filleuls validés.
-
-🔔 Tu recevras une notification à chaque fois qu'un filleul est validé.
-
-🏆 Les 10 meilleurs parrains de la semaine recevront chacun 1000 MBOA !
-
-👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA de bienvenue !
-
-👇 Clique sur le bouton ci-dessous pour en savoir plus.`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "🚀 Recevoir l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
-          [{ text: "❌ Pas intéressé", callback_data: "decline_offer" }]
-        ]
-      }
-    });
-  } else {
-    bot.sendMessage(chatId, '❗ Adresse BEP20 invalide. Elle doit commencer par 0x...');
   }
+  bot.sendMessage(chatId,
+    `🎉 Bienvenue dans l'airdrop officiel MboaCoin !\n` +
+    `Tu peux gagner 50 MBOA en complétant 5 étapes, puis un quiz. 👇`
+  );
+  // Étape 1
+  bot.sendMessage(chatId,
+    `📌 Étape 1 : Rejoins notre canal Telegram 👉 https://t.me/+q5siBqhkQCFiNDcx\n` +
+    `Envoie ta capture ici.`
+  );
 });
 
-bot.on('callback_query', (query) => {
-  const chatId = query.message.chat.id;
-  if (query.data === 'decline_offer') {
-    bot.sendMessage(chatId, `🙏 Merci pour ta participation !
-
-📢 Partage ton lien de parrainage autour de toi et gagne :
-
-- 💰 25 MBOA par filleul validé
-- 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10
-- 🔔 Notification à chaque fois qu'un filleul valide toutes ses étapes
-
-📊 Clique ici pour voir le classement (à venir).`);
-  }
+// /status
+bot.onText(/\/status/, msg => {
+  const id = msg.chat.id.toString(),
+        u  = users[id];
+  if (!u) return bot.sendMessage(id, "Tu n'as pas encore commencé. Tape /start.");
+  bot.sendMessage(id,
+    `📊 Statut : Étape ${u.step}/7\n` +
+    `Total MBOA : ${u.totalMBOA}`
+  );
 });
 
-bot.onText(/\/status/, (msg) => {
-  const user = users[msg.from.id.toString()];
-  bot.sendMessage(msg.chat.id, `📊 Ton avancement : Étape ${user?.step || 0} / 5`);
+// /parrainage
+bot.onText(/\/parrainage/, msg => {
+  const id = msg.chat.id.toString();
+  if (!users[id]) return bot.sendMessage(id, "Commence par /start.");
+  bot.sendMessage(id,
+    `🔗 Ton lien d'invitation :\n${generateReferralLink(id)}`
+  );
 });
 
-bot.onText(/\/mesfilleuls/, (msg) => {
-  const user = users[msg.from.id.toString()];
-  if (!user || !user.referrals || user.referrals.length === 0) {
-    return bot.sendMessage(msg.chat.id, "Aucun filleul pour l'instant.");
-  }
+// /mesfilleuls
+bot.onText(/\/mesfilleuls/, msg => {
+  const id = msg.chat.id.toString(),
+        u  = users[id];
+  if (!u || !u.referrals.length) return bot.sendMessage(id, "Aucun filleul enregistré.");
+  const list = u.referrals.map(fid => {
+    const st = (users[fid] && users[fid].step >= 7) ? '✅' : '⏳';
+    return `• ${fid} ${st}`;
+  }).join('\n');
+  bot.sendMessage(id,
+    `👥 Mes filleuls :\n${list}`
+  );
+});
 
-  const lines = user.referrals.map(id => {
-    const f = users[id];
-    return `👤 @${f?.username || id} - ${f?.step === 6 ? '✅ Validé' : '⏳ En cours'}`;
+// /leaderboard
+bot.onText(/\/leaderboard/, msg => {
+  const arr = Object.values(users)
+    .filter(u => u.referrals?.length)
+    .sort((a,b) => b.referrals.length - a.referrals.length)
+    .slice(0,10)
+    .map((u,i) => `${i+1}. ${u.id} - ${u.referrals.length}`);
+  bot.sendMessage(msg.chat.id,
+    `🏆 Top parrains :\n${arr.join('\n')}`
+  );
+});
+
+// /export admin
+bot.onText(/\/export/, msg => {
+  if (msg.from.id !== adminId) return;
+  const csv = createObjectCsvWriter({
+    path: 'participants.csv',
+    header: [
+      { id:'id',         title:'ID' },
+      { id:'totalMBOA',  title:'MBOA' },
+      { id:'step',       title:'Étape' },
+      { id:'referrer',   title:'Parrain' }
+    ]
   });
-
-  bot.sendMessage(msg.chat.id, lines.join('\n'));
+  const recs = Object.values(users).map(u => ({
+    id: u.id,
+    totalMBOA: u.totalMBOA,
+    step: u.step,
+    referrer: u.referrer||''
+  }));
+  csv.writeRecords(recs).then(() => bot.sendDocument(msg.chat.id, 'participants.csv'));
 });
 
-bot.onText(/\/top10/, (msg) => {
-  const sorted = Object.values(users)
-    .sort((a, b) => (b.referrals?.length || 0) - (a.referrals?.length || 0))
-    .slice(0, 10);
-
-  const text = sorted.map((u, i) =>
-    `${i + 1}. @${u.username || u.id} - ${u.referrals?.length || 0} filleuls`
-  ).join('\n');
-
-  bot.sendMessage(msg.chat.id, `🏆 Top 10 des parrains :\n${text}`);
-});
-
+// /broadcast admin
 bot.onText(/\/broadcast (.+)/, (msg, match) => {
   if (msg.from.id !== adminId) return;
   const text = match[1];
-  Object.keys(users).forEach(id => bot.sendMessage(id, `📢 ${text}`).catch(() => {}));
+  Object.keys(users).forEach(id => bot.sendMessage(id, `📢 ${text}`));
+  bot.sendMessage(msg.chat.id, 'Message envoyé.');
 });
 
-bot.onText(/\/export/, (msg) => {
-  if (msg.from.id !== adminId) return;
-
-  const csv = require('csv-writer').createObjectCsvWriter({
-    path: 'participants.csv',
-    header: [
-      { id: 'id', title: 'ID' },
-      { id: 'username', title: 'Username' },
-      { id: 'wallet', title: 'Wallet' },
-      { id: 'rewards', title: 'Rewards' },
-      { id: 'referrer', title: 'Referrer' }
-    ]
-  });
-
-  csv.writeRecords(Object.values(users)).then(() => {
-    bot.sendDocument(msg.chat.id, 'participants.csv');
-  });
-});
-
-
-
-bot.on('callback_query', (query) => {
-  const userId = query.from.id.toString();
-  const chatId = query.message.chat.id;
-  const data = query.data;
-
-  if (!users[userId]) return;
-
-  users[userId].quiz = users[userId].quiz || { score: 0, step: 1 };
-
-  if (data.startsWith('q1_')) {
-    if (data === 'q1_correct') users[userId].quiz.score += 1;
-    users[userId].quiz.step = 2;
-    bot.sendMessage(chatId, `Question 2 : Quel est le nom de la super app de MboaCoin ?`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "A. MboaBank", callback_data: "q2_wrong" }],
-          [{ text: "B. MboaSend", callback_data: "q2_wrong" }],
-          [{ text: "C. MboaPay", callback_data: "q2_correct" }]
-        ]
-      }
-    });
-  } else if (data.startsWith('q2_')) {
-    if (data === 'q2_correct') users[userId].quiz.score += 1;
-    users[userId].quiz.step = 3;
-    bot.sendMessage(chatId, `Question 3 : Combien peut-on gagner en parrainant un filleul validé ?`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "A. 10 MBOA", callback_data: "q3_wrong" }],
-          [{ text: "B. 25 MBOA", callback_data: "q3_correct" }],
-          [{ text: "C. 100 MBOA", callback_data: "q3_wrong" }]
-        ]
-      }
-    });
-  } else if (data.startsWith('q3_')) {
-    if (data === 'q3_correct') users[userId].quiz.score += 1;
-    const score = users[userId].quiz.score;
-    delete users[userId].quiz;
-
-    if (score >= 2) {
-      users[userId].rewards += 30;
-      bot.sendMessage(chatId, `🎉 Bravo ! Tu as bien répondu au quiz (score : ${score}/3).\n\nTu as maintenant gagné 50 MBOA !\n\nVoici ton lien de parrainage personnalisé :\n👉 https://t.me/MboaCoinAirdropBot?start=${userId}\n\n💰 Partage-le pour gagner 25 MBOA par filleul validé !\n🏆 Les 10 meilleurs parrains de la semaine gagnent 1000 MBOA chacun.\n🔔 Tu recevras une notification dès qu'un filleul est validé.\n\n👇 Clique sur le bouton ci-dessous pour devenir Ambassadeur MBOACOIN et recevoir 10.000 MBOA de bienvenue !`, {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "🚀 Recevoir l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
-            [{ text: "❌ Pas intéressé", callback_data: "decline_offer" }]
-          ]
-        }
-      });
-    } else {
-      bot.sendMessage(chatId, `❌ Tu n'as pas obtenu assez de bonnes réponses (score : ${score}/3).\n\n🔁 Consulte https://mboacoin.com et retente ta chance avec /start.`);
-    }
+// === AIRDROP STEPS ===
+bot.on('photo', msg => {
+  const id = msg.chat.id.toString();
+  if (!users[id]) return;
+  const u = users[id];
+  if (u.step >= 1 && u.step <= 4) {
+    u.totalMBOA += 10;
+    bot.sendMessage(id,
+      `✅ Étape ${u.step} validée ! +10 MBOA\n` +
+      `Total : ${u.totalMBOA}`
+    );
+    u.step++;
     saveUsers();
-  } else if (data === 'decline_offer') {
-    bot.sendMessage(chatId, `🙏 Merci pour ta participation !\n\n📢 Partage ton lien de parrainage autour de toi et gagne :\n\n- 💰 25 MBOA par filleul validé\n- 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10\n- 🔔 Notification à chaque fois qu'un filleul valide toutes ses étapes\n\n📊 Clique ici pour voir le classement (à venir).`);
+    let prompt;
+    switch (u.step) {
+      case 2:
+        prompt = `📌 Étape 2 : Aime notre page Facebook 👉 https://www.facebook.com/profile.php?id=61578396563477`;
+        break;
+      case 3:
+        prompt = `📌 Étape 3 : Suis-nous sur Instagram 👉 https://www.instagram.com/mboa_coin/`;
+        break;
+      case 4:
+        prompt = `📌 Étape 4 : Suis-nous sur Twitter 👉 https://x.com/MboaCoin`;
+        break;
+      case 5:
+        prompt = `📌 Étape 5 : Envoie ton adresse BEP20 commençant par 0x`;
+        break;
+    }
+    return bot.sendMessage(id, prompt);
   }
 });
+
+// Wallet submission
+bot.on('message', msg => {
+  const id = msg.chat.id.toString();
+  if (!users[id]) return;
+  const u = users[id];
+  if (u.step === 5 && msg.text?.startsWith('0x') && msg.text.length === 42) {
+    u.wallet = msg.text.trim();
+    u.totalMBOA += 10;
+    u.step = 6;
+    saveUsers();
+    bot.sendMessage(id,
+      `✅ Étape wallet validée ! +10 MBOA\n` +
+      `Total : ${u.totalMBOA}`
+    );
+    bot.sendMessage(id,
+      `🔍 Avant le quiz, visite notre site 👉 https://www.mboacoin.com`
+    );
+    const q0 = quizQuestions[0];
+    const kb0 = q0.options.map((o,i) => [{ text: o, callback_data: `quiz_0_${i}` }]);
+    return bot.sendMessage(id, q0.text, { reply_markup: { inline_keyboard: kb0 } });
+  }
+});
+
+// Quiz handling
+bot.on('callback_query', query => {
+  const id = query.from.id.toString();
+  if (!users[id]) return;
+  const u = users[id];
+  const d = query.data;
+  if (d.startsWith('quiz_')) {
+    const [_, qi, ai] = d.split('_'),
+          idx = +qi,
+          ans = +ai,
+          q = quizQuestions[idx];
+    if (ans === q.answerIndex) {
+      u.totalMBOA += 10;
+      bot.sendMessage(id, '✅ Bonne réponse !');
+    } else {
+      return bot.sendMessage(id, '❌ Mauvaise réponse. Consulte le site avant de réessayer.');
+    }
+    if (idx < quizQuestions.length - 1) {
+      saveUsers();
+      const nq = quizQuestions[idx+1];
+      const kb = nq.options.map((o,i) => [{ text: o, callback_data: `quiz_${idx+1}_${i}` }]);
+      return bot.sendMessage(id, nq.text, { reply_markup: { inline_keyboard: kb } });
+    } else {
+      // quiz terminé
+      u.step = 7;
+      saveUsers();
+      bot.sendMessage(id,
+        `🎉 Quiz terminé ! +${quizQuestions.length * 10} MBOA (total ${u.totalMBOA})`
+      );
+      const refLink = generateReferralLink(id);
+      bot.sendMessage(id,
+        `Le savais-tu ? Tu peux gagner 50 MBOA pour chacun de tes filleuls qui complète l'airdrop de MboaCoin.\n` +
+        `Partage ton lien pour inviter tes amis :\n🔗 ${refLink}`
+      );
+      return bot.sendMessage(id,
+        `🎓 Deviens Ambassadeur MboaCoin dès aujourd'hui et reçois **10 000 MBOA de bienvenue** ! Accès VIP, récompenses mensuelles et plus encore t'attendent.`,
+        { reply_markup: {
+            inline_keyboard: [
+              [{ text: "🚀 Je veux l'offre", url: "https://airdrop.mboacoin.com/membrefondateur" }],
+              [{ text: "❌ Non merci",    callback_data: "decline" }]
+            ]
+          }
+        }
+      );
+    }
+  }
+  if (query.data === 'decline') {
+    const u2 = users[query.from.id.toString()];
+    bot.sendMessage(u2.id,
+      `👍 Merci pour ta participation !\n` +
+      `Récapitulatif : ${u2.totalMBOA} MBOA gagnés.\n` +
+      `Chaque samedi, ton portefeuille sera crédité en MBOA selon tes filleuls validés.\n` +
+      `Les 10 meilleurs parrains reçoivent 1000 MBOA chaque semaine.\n` +
+      `📊 Tableau de bord à venir.`
+    );
+  }
+});
+
+// notification & export hebdo
+cron.schedule('0 18 * * SAT', () => {
+  const csvW = createObjectCsvWriter({
+    path: 'weekly.csv',
+    header: [
+      { id:'id',        title:'ID' },
+      { id:'totalMBOA', title:'MBOA' },
+      { id:'referrer',  title:'Parrain' }
+    ]
+  });
+  const recs = Object.values(users).map(u => ({
+    id: u.id,
+    totalMBOA: u.totalMBOA,
+    referrer: u.referrer || ''
+  }));
+  csvW.writeRecords(recs).then(() => bot.sendDocument(adminId, 'weekly.csv'));
+  Object.values(users).forEach(u => {
+    if (u.referrer && users[u.referrer]) {
+      bot.sendMessage(u.referrer,
+        `🔔 Ton filleul ${u.id} a complété aujourd'hui. +50 MBOA !`
+      );
+    }
+  });
+});
+
+console.log('🤖 MboaCoin Airdrop Bot is running...');
