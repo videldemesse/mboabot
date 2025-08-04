@@ -82,7 +82,8 @@ bot.on('photo', (msg) => {
     case 1:
       users[userId].proofs.telegram = msg.photo;
       users[userId].step = 2;
-      bot.sendMessage(chatId, `✅ Étape 1 validée !
+      user.rewards += 10;
+      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 1 validée !
 
 📌 Étape 2 : Aime notre page Facebook :
 👉 https://www.facebook.com/profile.php?id=61578396563477
@@ -92,7 +93,8 @@ Puis envoie une capture.`);
     case 2:
       users[userId].proofs.facebook = msg.photo;
       users[userId].step = 3;
-      bot.sendMessage(chatId, `✅ Étape 2 validée !
+      user.rewards += 10;
+      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 2 validée !
 
 📌 Étape 3 : Suis-nous sur Instagram :
 👉 https://www.instagram.com/mboa_coin/
@@ -102,7 +104,8 @@ Puis envoie une capture.`);
     case 3:
       users[userId].proofs.instagram = msg.photo;
       users[userId].step = 4;
-      bot.sendMessage(chatId, `✅ Étape 3 validée !
+      user.rewards += 10;
+      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 3 validée !
 
 📌 Étape 4 : Suis-nous sur Twitter :
 👉 https://x.com/MboaCoin
@@ -112,7 +115,8 @@ Puis envoie une capture.`);
     case 4:
       users[userId].proofs.twitter = msg.photo;
       users[userId].step = 5;
-      bot.sendMessage(chatId, `✅ Étape 4 validée !
+      user.rewards += 10;
+      bot.sendMessage(chatId, `🎉 Vous avez gagné 10 MBOA !\n\n✅ Étape 4 validée !
 
 📌 Étape 5 : Envoie ton adresse BEP20 pour recevoir tes MBOA`);
       break;
@@ -140,11 +144,17 @@ bot.on('message', (msg) => {
       saveUsers();
     }
 
-    bot.sendMessage(chatId, `🎉 Félicitations ! Tu as terminé toutes les étapes.
+    bot.sendMessage(chatId, `🎉 Félicitations ! Tu as terminé toutes les étapes et gagné 50 MBOA.
 
-Voici ton lien de parrainage : ${generateReferralLink(userId)}
+🔗 Partage ton lien d’affiliation pour gagner 25 MBOA par filleul validé !
 
-👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA !
+💰 Les MBOA seront crédités dans ton portefeuille chaque samedi selon ton nombre de filleuls validés.
+
+🔔 Tu recevras une notification à chaque fois qu’un filleul est validé.
+
+🏆 Les 10 meilleurs parrains de la semaine recevront chacun 1000 MBOA !
+
+👑 Pour aller plus loin, deviens Ambassadeur MBOACOIN et reçois 10.000 MBOA de bienvenue !
 
 👇 Clique sur le bouton ci-dessous pour en savoir plus.`, {
       reply_markup: {
@@ -166,8 +176,9 @@ bot.on('callback_query', (query) => {
 
 📢 Partage ton lien de parrainage autour de toi et gagne :
 
-- 💰 50 MBOA par filleul validé
+- 💰 25 MBOA par filleul validé
 - 🎁 NFT exclusif (valeur 100 $) chaque semaine si tu es dans le Top 10
+- 🔔 Notification à chaque fois qu’un filleul valide toutes ses étapes
 
 📊 Clique ici pour voir le classement (à venir).`);
   }
